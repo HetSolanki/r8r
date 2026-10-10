@@ -132,7 +132,11 @@ def build(env: str, out_dir: pathlib.Path, end: str | None = None, *,
         # One search per group. Computing the scenarios a second time here to
         # read the advice off them would be a second path to the same number,
         # and two paths to one number do not stay equal.
-        decision = _decision(snap, g, it, recs, price, profile, region, cfg, ca, rules)
+        # A group the autoscaler does not manage is never scaled down on its own:
+        # every path below models it that way, and no autoscaler panel is shown.
+        managed = found is None or autoscaler.manages(found, g.name)
+        g_ca = ca if managed else autoscalers.unmanaged_settings(autoscaler)
+        decision = _decision(snap, g, it, recs, price, profile, region, cfg, g_ca, rules)
         rec_saving = (decision.get("advice") or {}).get("monthlyDelta") or 0.0
         # The markdown report's disposition, from the same function -- the
         # console is where decisions get made, so it must not say less.
@@ -153,7 +157,9 @@ def build(env: str, out_dir: pathlib.Path, end: str | None = None, *,
             "target": rec.nodes_target if rec else g.nodes_current,
             "binding": rec.binding_constraint if rec else "",
             **decision,
-            "autoscaler": _pool_estimate(g, decision, price) or _ca_estimate(snap, g, cfg, ca, price, it, rules),
+            "autoscaled": managed,
+            "autoscaler": (_pool_estimate(g, decision, price) or _ca_estimate(snap, g, cfg, ca, price, it, rules))
+                          if managed else None,
             # A Karpenter pool's nodes today, by size: what the pool runs is
             # not one type times a count anyone set.
             "fleet": next((s.get("fleet") for s in decision.get("scenarios") or [] if s.get("key") == "asis"), []),
@@ -252,7 +258,7 @@ def build(env: str, out_dir: pathlib.Path, end: str | None = None, *,
                        # provisioning + consolidation replay (engine/karpenter.py).
                        "modelled": autoscaler.models_scale_down or (
                            bool(ngs) and all((n.get("autoscaler") or {}).get("replayed")
-                                             for n in ngs if not n.get("empty")))},
+                                             for n in ngs if not n.get("empty") and n.get("autoscaled", True)))},
         "caConfigured": found is not None,
         "caThreshold": ca.utilization_threshold if ca else None,
         # The live cluster for the exact replay (kube-scheduler + CA v1.35), shared
@@ -1090,7 +1096,7 @@ def _model(snap, g, cfg, recs) -> dict | None:
     rows = (snap.placements or {}).get(g.name) or []
     if not rows:
         return None
-    ca = autoscalers.scale_down_settings(snap)
+    ca = autoscalers.scale_down_settings(snap, g.name)
     rules = rules_from_snapshot(snap)
     loads = pressure.workload_loads(snap)
 

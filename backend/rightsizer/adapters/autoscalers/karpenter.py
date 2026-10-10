@@ -1,4 +1,4 @@
-"""Karpenter: found, configured, and named -- but not replayed.
+"""Karpenter: found, configured, and replayed per NodePool.
 
 Karpenter does not scale node groups; it provisions nodes per NodePool and
 removes them by *consolidation*: deleting or replacing any node whose pods fit
@@ -6,10 +6,13 @@ elsewhere more cheaply, after ``consolidateAfter``, within the pool's
 disruption budgets. There is no utilisation threshold and no fixed set of
 instance types per group.
 
-The engine replays Cluster Autoscaler, not that. Until a Karpenter replay
-exists, a Karpenter cluster is simulated with Cluster Autoscaler's rules set to
-the nearest equivalents (:func:`_nearest_ca_args`), and every output that
-carries its figures says they are an approximation.
+Each NodePool whose nodes and pods were read is replayed with Karpenter's own
+provisioning and consolidation (:mod:`rightsizer.engine.karpenter`). Groups
+that replay cannot cover -- a node group outside every NodePool, such as an
+OKE managed pool beside Karpenter, or a cluster whose pods were not read -- fall
+back to Cluster Autoscaler's rules set to the nearest equivalents
+(:func:`_nearest_ca_args`), and every output that carries those figures says
+they are an approximation.
 """
 
 from __future__ import annotations
@@ -138,6 +141,14 @@ class Karpenter(NodeAutoscaler):
         pools = (config.settings if config else {}).get("nodepools") or []
         return CAConfig(source=f"approximated from Karpenter ({len(pools)} NodePool(s))",
                         args=_nearest_ca_args(pools))
+
+    def manages(self, config: AutoscalerConfig | None, group: str) -> bool:
+        # Karpenter scales its own NodePools and nothing else: a group beside
+        # them (an OKE managed pool) keeps whatever size someone gave it. With no
+        # NodePools read there is nothing to tell them apart, so every group is
+        # taken as Karpenter's and approximated, as before.
+        pools = (config.settings if config else {}).get("nodepools") or []
+        return not pools or any(p.get("name") == group for p in pools)
 
     def notes(self, config: AutoscalerConfig | None) -> list[str]:
         if (config.settings if config else {}).get("nodepools"):

@@ -280,12 +280,43 @@ function KarpenterPanel({ groups, title }: { groups: NodeGroup[]; title: string 
   )
 }
 
-function AutoscalerPanel({ groups, configured, autoscaler }: {
+/** Groups no autoscaler manages: nothing scales them, so nothing is simulated. */
+function UnmanagedPanel({ groups, title }: { groups: NodeGroup[]; title: string }) {
+  const one = groups.length === 1
+  return (
+    <Card className="animate-rise p-4 text-[12.5px] text-muted-foreground">
+      <strong className="font-semibold text-foreground">
+        Not autoscaled: <span className="font-mono">{groups.map((g) => g.name).join(", ")}</span>
+      </strong>
+      <p className="mt-1 max-w-[78ch]">
+        {one ? "This group is" : "These groups are"} not a {title} pool, and no other autoscaler
+        manages {one ? "it" : "them"}, so {one ? "its" : "their"} node count changes only when someone
+        changes it: no scale-down is simulated. Resizing or reshaping {one ? "it" : "them"} by hand is
+        still assessed in Recommendations.
+      </p>
+    </Card>
+  )
+}
+
+function AutoscalerPanel({ groups, configured, autoscaler, replayFailed = false }: {
   groups: NodeGroup[]; configured: boolean; autoscaler?: Cluster["autoscaler"]
+  /** These groups are the autoscaler's but its own replay could not run for
+   *  them, beside groups it did replay: only they are approximated. */
+  replayFailed?: boolean
 }) {
-  const rows = groups.filter((g) => g.autoscaler)
   // Exports from before adapters carry no autoscaler: those are Cluster Autoscaler.
   const title = autoscaler?.title ?? "Cluster Autoscaler"
+  const unmanaged = groups.filter((g) => g.autoscaled === false)
+  if (unmanaged.length > 0) {
+    const managed = groups.filter((g) => g.autoscaled !== false)
+    return (
+      <>
+        {managed.length > 0 && <AutoscalerPanel groups={managed} configured={configured} autoscaler={autoscaler} />}
+        <UnmanagedPanel groups={unmanaged} title={title} />
+      </>
+    )
+  }
+  const rows = groups.filter((g) => g.autoscaler)
   if (!configured || rows.length === 0) {
     return (
       <Card className="animate-rise p-4 text-[12.5px] text-muted-foreground">
@@ -299,10 +330,22 @@ function AutoscalerPanel({ groups, configured, autoscaler }: {
       </Card>
     )
   }
-  const est = rows[0].autoscaler!
-  if (rows.every((g) => g.autoscaler?.replayed)) {
+  const replayed = rows.filter((g) => g.autoscaler?.replayed)
+  if (replayed.length === rows.length) {
     return <KarpenterPanel groups={rows} title={title} />
   }
+  if (replayed.length > 0) {
+    // Mixed: the autoscaler's own pools were replayed by its own algorithm;
+    // judge each group by how it was modelled, not the cluster by its weakest.
+    return (
+      <>
+        <KarpenterPanel groups={replayed} title={title} />
+        <AutoscalerPanel groups={rows.filter((g) => !g.autoscaler?.replayed)} configured={configured}
+                         autoscaler={autoscaler} replayFailed />
+      </>
+    )
+  }
+  const est = rows[0].autoscaler!
   const unchecked = est.unchecked ?? []
   /** Nodes under the utilisation threshold that a veto class still holds.
    *
@@ -317,11 +360,18 @@ function AutoscalerPanel({ groups, configured, autoscaler }: {
   return (
     <Card className="animate-rise" style={{ animationDelay: "160ms" }}>
       <CardHeader>
-        <CardTitle>What {title} will do by itself</CardTitle>
+        <CardTitle>
+          {replayFailed
+            ? `${title}, approximated: ${rows.map((g) => g.name).join(", ")}`
+            : `What ${title} will do by itself`}
+        </CardTitle>
         {autoscaler && !autoscaler.modelled && (
           <p className="max-w-[78ch] text-[12.5px] font-medium text-status-warning">
-            {title} is not replayed: these figures use Cluster Autoscaler&apos;s rules set to the
-            nearest equivalent settings, and are an approximation.
+            {replayFailed
+              ? `${title}'s own replay could not run for ${rows.length === 1 ? "this pool" : "these pools"}: these figures use`
+              : `${title} is not replayed: these figures use`}{" "}
+            Cluster Autoscaler&apos;s rules set to the nearest equivalent settings, and are an
+            approximation.
           </p>
         )}
         <CardDescription className="max-w-[78ch]">
@@ -449,7 +499,9 @@ function AutoscalerPanel({ groups, configured, autoscaler }: {
             <div key={i}>· {r}</div>
           ))}
           <div className="mt-1">
-            Deployed flags differing from upstream defaults:{" "}
+            {autoscaler && !autoscaler.modelled
+              ? `Cluster Autoscaler settings standing in for ${title}:`
+              : "Deployed flags differing from upstream defaults:"}{" "}
             <span className="font-mono">
               {Object.entries(est.nonDefaultArgs).map(([k, v]) => `${k}=${v}`).join("  ")}
             </span>

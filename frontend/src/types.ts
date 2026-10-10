@@ -508,6 +508,9 @@ export interface NodeGroup {
    *  packer must reproduce. Absent on a group with no recorded placement. */
   sim?: import("@/lib/simulate").Sim | null
   autoscaler?: AutoscalerEstimate | null
+  /** false: no autoscaler manages this group (an OKE managed pool beside
+   *  Karpenter's NodePools); its node count changes only when someone changes it. */
+  autoscaled?: boolean
   /** A Karpenter pool's nodes today by size; empty for a group of one set type. */
   fleet?: FleetEntry[]
   advice?: Advice | null

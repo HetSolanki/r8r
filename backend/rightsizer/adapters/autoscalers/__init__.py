@@ -61,10 +61,22 @@ def for_snapshot(snapshot) -> tuple[NodeAutoscaler, AutoscalerConfig | None]:
     return get(config.kind if config else DEFAULT), config
 
 
-def scale_down_settings(snapshot):
-    """The settings the engine's scale-down replay runs with for this snapshot."""
+def scale_down_settings(snapshot, group: str | None = None):
+    """The settings the engine's scale-down replay runs with for this snapshot --
+    for ``group``, scale-down off when the cluster's autoscaler does not manage it."""
     adapter, config = for_snapshot(snapshot)
+    if group is not None and config is not None and not adapter.manages(config, group):
+        return unmanaged_settings(adapter)
     return adapter.scale_down_settings(config)
+
+
+def unmanaged_settings(adapter: NodeAutoscaler):
+    """A group no autoscaler scales: nothing removes its nodes on its own, so the
+    replay runs with scale-down disabled rather than borrowing another's rules."""
+    from rightsizer.engine.autoscaler import DEFAULTS, CAConfig
+
+    return CAConfig(source=f"not autoscaled: no {adapter.title} pool manages this group",
+                    args={**DEFAULTS, "scale-down-enabled": False})
 
 
 def group_label_keys() -> tuple[str, ...]:

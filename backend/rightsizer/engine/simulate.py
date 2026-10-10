@@ -1320,7 +1320,7 @@ def scenarios(
     from rightsizer.sources.storage import assess as storage_assess
 
     if ca is None:
-        ca = scale_down_settings(snapshot)
+        ca = scale_down_settings(snapshot, group_state.name)
     if rules is None:
         rules = rules_from_snapshot(snapshot)
 

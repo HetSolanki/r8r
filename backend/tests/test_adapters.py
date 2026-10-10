@@ -123,6 +123,14 @@ def test_karpenter_is_discovered_and_mapped_but_never_passed_off_as_modelled(mon
     (bare,) = karpenter.notes(None)
     assert "approximation" in bare and "general" in bare
 
+    # Karpenter scales its own NodePools only; a group beside them is nobody's.
+    pool = found.settings["nodepools"][0]["name"]
+    assert karpenter.manages(found, pool) and not karpenter.manages(found, "oke-managed-pool")
+    assert karpenter.manages(None, "anything"), "no NodePools read: nothing to tell groups apart"
+    off = autoscalers.unmanaged_settings(karpenter)
+    assert not off.enabled and "not autoscaled" in off.source
+    assert autoscalers.get("cluster-autoscaler").manages(None, "any-group")
+
     # Round-trips through a snapshot, and every reader then picks Karpenter.
     snap = _snap(autoscaler=found.to_dict())
     adapter, config = autoscalers.for_snapshot(snap)

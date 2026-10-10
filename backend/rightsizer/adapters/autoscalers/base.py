@@ -122,6 +122,11 @@ class NodeAutoscaler(ABC):
         """
         return None
 
+    def manages(self, config: AutoscalerConfig | None, group: str) -> bool:
+        """Whether this autoscaler scales ``group`` at all. Cluster Autoscaler is
+        taken to scale every node group, as it is deployed in practice."""
+        return True
+
     def notes(self, config: AutoscalerConfig | None) -> list[str]:
         """What a reader must know before trusting the figures."""
         return []
