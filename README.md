@@ -1,4 +1,4 @@
-# r8r
+# r8r - rightsizer
 
 Kubernetes cluster rightsizing that keeps production safe. r8r reads a cluster's
 usage history, replays its scheduler and node autoscaler, and recommends request,
