@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy to clusters.json (which git ignores) and fill in. Optional overrides for export_ui.py: entries only fill in what a snapshot did not record, or correct it. `known` lists clusters that exist, so uncollected ones show as such. `periods` labels backtest windows by their end date.",
+  "discount": 0.12,
+  "clusters": {
+    "my-cluster": {"cluster": "my-cluster", "profile": "my-aws-profile", "region": "us-east-1", "account": "123456789012"}
+  },
+  "known": [
+    "my-cluster"
+  ],
+  "periods": {
+    "current": "Current"
+  }
+}

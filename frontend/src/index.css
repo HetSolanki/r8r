@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --sidebar: 240 4.8% 97.5%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.6rem;
+
+    /* Data-viz roles. The eight series slots are one categorical theme in a fixed
+       order -- the order is the CVD-safety mechanism, so assign 1,2,3... and
+       never cycle or reorder. Validated against both surfaces: worst adjacent
+       CVD dE 9.1 light / 8.4 dark, normal-vision 19.6 / 19.3. Aqua, yellow and
+       magenta fall below 3:1 on the light surface, so anything wearing them
+       carries a visible label. Status colors are reserved, never a series. */
+    --series-1: 212 68% 50%;    /* blue    */
+    --series-2: 18 82% 56%;     /* orange  */
+    --series-3: 159 73% 40%;    /* aqua    */
+    --series-4: 41 100% 46%;    /* yellow  */
+    --series-5: 337 70% 70%;    /* magenta */
+    --series-6: 120 100% 26%;   /* green   */
+    --series-7: 249 48% 44%;    /* violet  */
+    --series-8: 0 73% 59%;      /* red     */
+    --status-good: 120 86% 34%;
+    --status-warning: 42 96% 54%;
+    --status-serious: 19 78% 64%;
+    --status-critical: 0 61% 53%;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 98%;
+    --sidebar: 240 8% 6.5%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 17%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+
+    --series-1: 212 76% 56%;
+    --series-2: 16 70% 50%;
+    --series-3: 159 73% 36%;
+    --series-4: 40 100% 39%;
+    --series-5: 338 61% 58%;
+    --series-6: 120 100% 26%;
+    --series-7: 247 69% 72%;
+    --series-8: 0 72% 65%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; font-feature-settings: "rlig" 1, "calt" 1; }
+  .tnum { font-variant-numeric: tabular-nums; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* The AWS mark (public/icons8-aws-48.png) is navy letters and an orange smile on
+   nothing. On a dark surface the letters would vanish, so there the image is
+   inverted: the hue-rotate turns the inverted smile back towards orange and the
+   brightness lifts the letters to white (#232F3E -> white, #FF9900 -> #FF8200).
+   The selected picker button (.bg-primary) is the one surface whose darkness
+   runs opposite to the theme, so it is handled the other way round. */
+.dark img[data-mark="aws"],
+:root:not(.dark) .bg-primary img[data-mark="aws"] {
+  filter: invert(1) hue-rotate(180deg) brightness(1.6);
+}
+.dark .bg-primary img[data-mark="aws"] {
+  filter: none;
+}
