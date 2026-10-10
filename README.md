@@ -5,8 +5,6 @@ usage history, replays its scheduler and node autoscaler, and recommends request
 replica and node changes that actually remove nodes — alongside the fixes that
 keep workloads from running out of memory.
 
-## Demo
-
 [Video](https://github.com/user-attachments/assets/e742ac89-6a89-431e-b874-c800edb4ba56)
 
 A 5-minute walkthrough: the fleet overview, cloud and autoscaler adapters,
